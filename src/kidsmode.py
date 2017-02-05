@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
-# Author: Quinn Song
+# Author:
+#   Quinn Song <quinn4dev@gmail.com>
 # kidsmode.py: use regex patterns to check if expression is valid;
 # add return True or False
 

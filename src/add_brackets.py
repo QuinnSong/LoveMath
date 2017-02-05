@@ -1,7 +1,8 @@
 # -*- coding: cp936 -*-
 #!/usr/bin/env python
 
-# Author: Quinn Song
+# Author:
+#   Quinn Song <quinn4dev@gmail.com>
 # add_brackets.py: insert one or two pairs of brackets randomly;
 # add return a valid expression
 

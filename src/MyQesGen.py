@@ -1,7 +1,8 @@
 # -*- coding: cp936 -*- 
 #!/usr/bin/env python
 
-# Author: Quinn Song
+# Author:
+#   Quinn Song <quinn4dev@gmail.com>
 # MyQesGen.py: the main module of "Love Math";
 # 
 ###########################################################################
@@ -32,11 +33,13 @@ OPS = ['+', '-', '*', '/']
 # bad patterns
 BAD_PATTERN_1 = '\d+\/\d+\/'
 BAD_PATTERN_2 = '(\d+)\/(\d+)'
+# other consts
 SIGNS =[ u"( )", u"□", u"?", u"__" ]
 VER = 'v1.22' # software version
 BUILD = 'Build 170204'
 AUTHOR = 'Quinn Song'
 TITLE = 'Love Math'
+MY_CLOUD_STORAGE = 'http://pan.baidu.com/s/1CNWlg'
 PANEL_BKCOLOR = wx.Colour(234,234,234)
 # ---------------------------------------------
 
@@ -64,14 +67,19 @@ class Printer(HtmlEasyPrinting):
          self.PrintText(text, doc_name)  
 
 class CountEvent(wx.PyCommandEvent):
-    """Event to signal that a count value is ready"""
+    """
+    Event to signal that a count value is ready
+    """
     def __init__(self, etype, eid, value=None):
-        """Creates the event object"""
+        """
+        Creates the event object
+        """
         wx.PyCommandEvent.__init__(self, etype, eid)
         self._value = value
 
     def GetValue(self):
-        """Returns the value from the event.
+        """
+        Returns the value from the event.
         @return: the value of this event
 
         """
@@ -88,7 +96,8 @@ class CountingThread(threading.Thread):
         self._value = value
 
     def run(self):
-        """Overrides Thread.run. Don't call this directly its called internally
+        """
+        Overrides Thread.run. Don't call this directly its called internally
         when you call Thread.start().
         """
         self._parent.run_thread()
@@ -103,9 +112,11 @@ class CountingThread(threading.Thread):
 class ExpressionGenerator ( wx.Dialog ):
         
         def __init__( self, parent ):
-                wx.Dialog.__init__ ( self, parent, id = wx.ID_ANY, title = u"{} {}".format(TITLE, VER), pos = wx.DefaultPosition, size = wx.Size( 1024,650 ), style = wx.DEFAULT_DIALOG_STYLE|wx.MINIMIZE_BOX|wx.RESIZE_BORDER|wx.MAXIMIZE_BOX )
+                wx.Dialog.__init__ ( self, parent, id = wx.ID_ANY, title = u"{} {}".format(TITLE, VER), pos = wx.DefaultPosition,
+                    size = wx.Size( 1024,650 ), style = wx.DEFAULT_DIALOG_STYLE|wx.MINIMIZE_BOX|wx.RESIZE_BORDER|wx.MAXIMIZE_BOX )
                 
                 self.SetSizeHintsSz ((900, 550), wx.DefaultSize )
+                
                 # init icons
                 self.preview_ico = lovemath.previewIcon.GetBitmap()
                 self.save32_ico = lovemath.save32Icon.GetBitmap()
@@ -454,7 +465,8 @@ class ExpressionGenerator ( wx.Dialog ):
                 self.m_staticTextQuesPath.Wrap( -1 )
                 bSizerTxtQuesPath.Add( self.m_staticTextQuesPath, 0, wx.ALL, 10 )
                 
-                self.m_filePickerQues = wx.FilePickerCtrl( sbSizerSavePath.GetStaticBox(), wx.ID_ANY, self.ques_path, u"Please choose a text file", u"*.txt", wx.DefaultPosition, wx.DefaultSize, wx.FLP_DEFAULT_STYLE|wx.FLP_SMALL )
+                self.m_filePickerQues = wx.FilePickerCtrl( sbSizerSavePath.GetStaticBox(), wx.ID_ANY, self.ques_path,
+                                        u"Please choose a text file", u"*.txt", wx.DefaultPosition, wx.DefaultSize, wx.FLP_DEFAULT_STYLE|wx.FLP_SMALL )
                 bSizerTxtQuesPath.Add( self.m_filePickerQues, 1, wx.ALL, 5 )            
                 
                 sbSizerSavePath.Add( bSizerTxtQuesPath, 0, wx.EXPAND, 5 )
@@ -465,7 +477,8 @@ class ExpressionGenerator ( wx.Dialog ):
                 self.m_staticTextAnswerPath.Wrap( -1 )
                 bSizerAnswerPath.Add( self.m_staticTextAnswerPath, 0, wx.ALL, 10 )
                 
-                self.m_filePickerAnswer = wx.FilePickerCtrl( sbSizerSavePath.GetStaticBox(), wx.ID_ANY, self.answ_path, u"Please choose a text file", u"*.txt", wx.DefaultPosition, wx.DefaultSize, wx.FLP_DEFAULT_STYLE|wx.FLP_SMALL )
+                self.m_filePickerAnswer = wx.FilePickerCtrl( sbSizerSavePath.GetStaticBox(), wx.ID_ANY, self.answ_path,
+                                            u"Please choose a text file", u"*.txt", wx.DefaultPosition, wx.DefaultSize, wx.FLP_DEFAULT_STYLE|wx.FLP_SMALL )
                 bSizerAnswerPath.Add( self.m_filePickerAnswer, 1, wx.ALL, 5 )
                 
                 
@@ -601,7 +614,7 @@ class ExpressionGenerator ( wx.Dialog ):
               
         def OpenLink( self, event ):
                 """ Open the link for cloud storage """
-                os.startfile('http://pan.baidu.com/s/1CNWlg')
+                os.startfile(MY_CLOUD_STORAGE)
                 event.Skip()
                 
         def OnHideQuesIndex (self, event):
@@ -829,17 +842,19 @@ class ExpressionGenerator ( wx.Dialog ):
                         if not self.have_remainder and  any(int(i)%int(j) != 0 for i,j in re.findall(BAD_PATTERN_2, exp) if int(j) != 0):
                                 continue                        
                         try:
-                                if self.check_bracket: exp = main(exp)
+                                if self.check_bracket:
+                                    exp = main(exp)
                                 # remove brackets like '(1+2+3)'
                                 exp = re.sub('^\((.*)\)$', '\g<1>', exp)
                                 exp = re.sub('(.*)\((\d+)\)(.*)', '\g<1>\g<2>\g<3>', exp )
                                 exp = re.sub('(.*)\(\((.*)\)\)(.*)', '\g<1>\g<2>\g<3>', exp )
                                 
-                                if self.check_every_step and ( not isExpValid(exp, self.max_num)): continue
+                                if self.check_every_step and ( not isExpValid(exp, self.max_num)):
+                                    continue
                                 
                                 result = eval(exp)
                                 if not self.allow_minus and result < 0:
-                                        continue
+                                    continue
 
                                 self.questions.append('{}. {}'.format(count + 1, exp) if not self.hide_ques_index else exp)
                                 self.answers.append(str(result))
@@ -953,7 +968,8 @@ class ExpressionGenerator ( wx.Dialog ):
                         bufs.append(row + ('\r\n' ) * self.line_spacing )
                         if self.is_dash:
                             dash_underline = ''.join([('-'* (len(str(self.max_num)) + 1)).rjust(self.adjust_value) for i in range(len(q_list))]) + ('\r\n' ) * self.line_spacing
-                        else: dash_underline = ''
+                        else:
+                            dash_underline = ''
                         row_answer = ''.join(['{}'.format (i if self.show_answer and (not self.save_answer_under) else '').rjust(self.adjust_value)  for i in a_list])
                         buf = buf + dash_underline + row_answer + '\r\n\r\n\r\n' # (add 3 new lines)
 
@@ -1003,12 +1019,14 @@ class ExpressionGenerator ( wx.Dialog ):
                 self.show_answer = False
                 output_ques = self.get_file_out() 
                 file_ques = self.ques_path
-                with  codecs.open(file_ques, 'w', 'utf-8') as f: f.write(output_ques)
+                with  codecs.open(file_ques, 'w', 'utf-8') as f:
+                    f.write(output_ques)
                 
                 self.show_answer = True
                 output_answer = self.get_file_out()        
                 file_answer = self.answ_path
-                with  codecs.open(file_answer, 'w', 'utf-8') as f: f.write(output_answer)
+                with  codecs.open(file_answer, 'w', 'utf-8') as f:
+                    f.write(output_answer)
                 self.show_answer = tmp
                 
                 # open both files
@@ -1116,13 +1134,20 @@ class ExpressionGenerator ( wx.Dialog ):
             conversion from pixel size (7 - 72) to html font size (1 - 7)
             Refer link: http://jerekdain.com/fontconversion.html
             """
-            if self.font_size in range(7, 10): return 1
-            elif self.font_size in range(10, 12): return 2
-            elif self.font_size in range(12, 14): return 3
-            elif self.font_size in range(14, 18): return 4
-            elif self.font_size in range(18, 24): return 5
-            elif self.font_size in range(24, 32): return 6
-            else: return 7
+            if self.font_size in range(7, 10):
+                return 1
+            elif self.font_size in range(10, 12):
+                return 2
+            elif self.font_size in range(12, 14):
+                return 3
+            elif self.font_size in range(14, 18):
+                return 4
+            elif self.font_size in range(18, 24):
+                return 5
+            elif self.font_size in range(24, 32):
+                return 6
+            else:
+                return 7
         
         def GetErrorText():
            "Put your error text logic here."
@@ -1131,7 +1156,5 @@ class ExpressionGenerator ( wx.Dialog ):
 if __name__ == '__main__':
     app = wx.App(False)
     frame = ExpressionGenerator(None)
-    app.MainLoop() 
-
-        
+    app.MainLoop()        
 
