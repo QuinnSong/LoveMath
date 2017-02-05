@@ -273,7 +273,7 @@ class ExpressionGenerator ( wx.Dialog ):
                 
                 self.m_btnSave = wx.BitmapButton( self.m_panelGen, wx.ID_ANY, self.save32_ico, wx.DefaultPosition, wx.Size(32, 32), wx.NO_BORDER|wx.BU_EXACTFIT ) 
                 bSizerBtns.Add( self.m_btnSave, 0, wx.ALL|wx.ALIGN_CENTER_VERTICAL, 5 )
-                self.m_btnSave.SetToolTipString(u'Save to text file')
+                self.m_btnSave.SetToolTipString(u'Export to text files')
                 
                 self.m_btnExit = wx.BitmapButton( self.m_panelGen, wx.ID_ANY, self.close32_ico, wx.DefaultPosition, wx.Size(32, 32), wx.NO_BORDER|wx.BU_EXACTFIT ) 
                 bSizerBtns.Add( self.m_btnExit, 0, wx.ALL|wx.ALIGN_CENTER_VERTICAL, 5 )
