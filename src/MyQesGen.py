@@ -1,8 +1,12 @@
 # -*- coding: cp936 -*- 
+#!/usr/bin/env python
 
+# Author: Quinn Song
+# MyQesGen.py: the main module of "Love Math";
+# 
 ###########################################################################
-## Python code generated with wxFormBuilder (version Jun 17 2015) 
-## Last update: 2017-01-04
+## GUI was generated with wxFormBuilder (version Jun 17 2015) 
+## Last update: 2017-02-04
 ## version 1.22
 ###########################################################################
 
@@ -43,8 +47,7 @@ EVT_COUNT = wx.PyEventBinder(myEVT_COUNT, 1)
 # get exe path
 EXE_PATH = unicode(os.path.dirname(sys.path[0]), 'cp936')
 
-# HtmlEasyPrinting solution from:
-# https://www.daniweb.com/programming/software-development/threads/453413/printing-in-wxpython
+# HtmlEasyPrinting is being used here for printing or preview
 class Printer(HtmlEasyPrinting):
     def __init__(self):
         global frame
@@ -74,7 +77,6 @@ class CountEvent(wx.PyCommandEvent):
         """
         return self._value
 
-
 class CountingThread(threading.Thread):
     def __init__(self, parent, value):
         """
@@ -101,7 +103,7 @@ class CountingThread(threading.Thread):
 class ExpressionGenerator ( wx.Dialog ):
         
         def __init__( self, parent ):
-                wx.Dialog.__init__ ( self, parent, id = wx.ID_ANY, title = u"%s %s" % (TITLE, VER), pos = wx.DefaultPosition, size = wx.Size( 1024,650 ), style = wx.DEFAULT_DIALOG_STYLE|wx.MINIMIZE_BOX|wx.RESIZE_BORDER|wx.MAXIMIZE_BOX )
+                wx.Dialog.__init__ ( self, parent, id = wx.ID_ANY, title = u"{} {}".format(TITLE, VER), pos = wx.DefaultPosition, size = wx.Size( 1024,650 ), style = wx.DEFAULT_DIALOG_STYLE|wx.MINIMIZE_BOX|wx.RESIZE_BORDER|wx.MAXIMIZE_BOX )
                 
                 self.SetSizeHintsSz ((900, 550), wx.DefaultSize )
                 # init icons
@@ -149,6 +151,7 @@ class ExpressionGenerator ( wx.Dialog ):
                 # default header and footer
                 self.footer = u"="*45 + u"\r\nThank you for using Love Math! ^O^"
                 self.header = u"Here are the arithmetic expressions:\r\n" + u"="*45
+                
                 # font settings
                 self.font_bold = False
                 self.font_name = 'Courier New'
@@ -236,6 +239,7 @@ class ExpressionGenerator ( wx.Dialog ):
                 self.m_btnAnswer.SetToolTipString(u'Hide Answer' if self.show_answer else u'Show Answer')
                 
                 bSizerBtns.AddSpacer( ( 0, 0), 5, wx.EXPAND, 5 )
+                
                 # add print icons
                 self.m_btnPageSetup = wx.BitmapButton( self.m_panelGen, wx.ID_ANY, self.setup_ico, wx.DefaultPosition, wx.Size(32, 32), wx.NO_BORDER|wx.BU_EXACTFIT  )
                 bSizerBtns.Add( self.m_btnPageSetup, 0, wx.ALL|wx.ALIGN_CENTER_VERTICAL, 0 )
@@ -486,10 +490,10 @@ class ExpressionGenerator ( wx.Dialog ):
                 bSizerAbout.Add( self.m_bitmapLogo, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
                 self.m_bitmapLogo.SetToolTipString(u'Visit My Cloud Storage')
                 
-                self.m_staticTextComments = wx.StaticText( self.m_panelAbout, wx.ID_ANY, u"%s %s %s" % (TITLE, VER, BUILD), wx.DefaultPosition, wx.DefaultSize, 0 )
+                self.m_staticTextComments = wx.StaticText( self.m_panelAbout, wx.ID_ANY, u"{} {} {}".format (TITLE, VER, BUILD), wx.DefaultPosition, wx.DefaultSize, 0 )
                 self.m_staticTextComments.Enable( False )
                 
-                self.m_staticTextContact = wx.StaticText( self.m_panelAbout, wx.ID_ANY, u"Author: Quinn Song", wx.DefaultPosition, wx.DefaultSize, 0 )
+                self.m_staticTextContact = wx.StaticText( self.m_panelAbout, wx.ID_ANY, u"Author: {}".format (AUTHOR), wx.DefaultPosition, wx.DefaultSize, 0 )
                 self.m_staticTextContact.Enable( False )
                 
                 bSizerAbout.Add( self.m_staticTextComments, 0, wx.ALIGN_CENTER|wx.ALL, 10 )
@@ -526,6 +530,7 @@ class ExpressionGenerator ( wx.Dialog ):
                 self.m_checkBoxHideQuesIndex.Bind(wx.EVT_CHECKBOX, self.OnHideQuesIndex )
                 self.m_checkBoxAnswerUnder.Bind(wx.EVT_CHECKBOX, self.OnAnswerUnder )
                 self.m_radioBoxRowCol.Bind(wx.EVT_RADIOBOX, self.OnToggleRowCol )
+                
                 # opers events
                 self.m_checkBoxAdd.Bind(wx.EVT_CHECKBOX, self.OnToggleRowCol )
                 self.m_checkBoxMinus.Bind(wx.EVT_CHECKBOX, self.OnToggleRowCol )
@@ -556,8 +561,6 @@ class ExpressionGenerator ( wx.Dialog ):
                 return b        
         
         # Virtual event handlers, overide them in your derived class
-        #def init_lst ( self ):
-        #       return [str(x) for x in range(1, self.max_num)] + self.opers
         def UpdateWindow( self, event ):
                 """ GUI refresh when font changes """
                 # update toggle button font
@@ -838,7 +841,7 @@ class ExpressionGenerator ( wx.Dialog ):
                                 if not self.allow_minus and result < 0:
                                         continue
 
-                                self.questions.append('%i. %s' % (count + 1, exp) if not self.hide_ques_index else exp)
+                                self.questions.append('{}. {}'.format(count + 1, exp) if not self.hide_ques_index else exp)
                                 self.answers.append(str(result))
                                 count = count + 1
                                 self.cancel = not dialog.Update(count)[0]
@@ -858,7 +861,7 @@ class ExpressionGenerator ( wx.Dialog ):
                         output = self.format_output()
                         self.m_richTextWindow.AppendText(output)
                 else:
-                        max_value_q = self.CalWidth('%s. + %s' % (self.total_items, self.max_num))
+                        max_value_q = self.CalWidth('{}. + {}'.format (self.total_items, self.max_num))
                         self.adjust_value = max_value_q/8 + 5           
         
                         output = self.format_output()
@@ -891,7 +894,9 @@ class ExpressionGenerator ( wx.Dialog ):
                 return line_width
             
         def convert_q (self, q_string):
-                # find all positions of numbers in a question, and pick a random to replace
+                """
+                find all positions of numbers in a question, and pick a random to replace
+                """
                 pos = [(m.start(0), m.end(0)) for m in re.finditer('(?<!\d)\d+(?!\d*\.)', q_string)]
                 a = random.choice(pos)
                 x = q_string[a[0]:a[1]]
@@ -918,17 +923,19 @@ class ExpressionGenerator ( wx.Dialog ):
                 max_value_q = max(map(self.CalWidth, self.questions))
 
                 for q_list, a_list in zip(q_grp, a_grp):
-                        body = ''.join([('%s = %s' % (q, a_list[i] if self.show_answer and (not self.save_answer_under) else '') ).ljust(self.adjust_value)  for i,q in enumerate(q_list)])
+                        body = ''.join([('{} = {}'.format (q, a_list[i] if self.show_answer and (not self.save_answer_under) else '') ).ljust(self.adjust_value)  for i,q in enumerate(q_list)])
                         buf = buf + body + ('\r\n' ) * self.line_spacing
                 if tmp_a != None: self.show_answer = tmp_a
                 if tmp_q: self.questions = tmp_q
                 return buf          
         
         def col_calculate  (self, buf ):
-                """ Vertical format """
+                """
+                Vertical format
+                """
                 q_grp = [self.questions[x:x+self.items_per_row] for x in xrange(0, self.total_items, self.items_per_row)]
                 a_grp = [self.answers[x:x+self.items_per_row] for x in xrange(0, self.total_items, self.items_per_row)]
-                max_value_q = self.CalWidth('%s. + %s' % (self.total_items, self.max_num))
+                max_value_q = self.CalWidth('{}. + {}'.format (self.total_items, self.max_num))
                 bufs = []
                 # define lambda functions for index alignment
                 left_indent = len(str(self.max_num/10)) + 5
@@ -947,7 +954,7 @@ class ExpressionGenerator ( wx.Dialog ):
                         if self.is_dash:
                             dash_underline = ''.join([('-'* (len(str(self.max_num)) + 1)).rjust(self.adjust_value) for i in range(len(q_list))]) + ('\r\n' ) * self.line_spacing
                         else: dash_underline = ''
-                        row_answer = ''.join(['%s' % (i if self.show_answer and (not self.save_answer_under) else '').rjust(self.adjust_value)  for i in a_list])
+                        row_answer = ''.join(['{}'.format (i if self.show_answer and (not self.save_answer_under) else '').rjust(self.adjust_value)  for i in a_list])
                         buf = buf + dash_underline + row_answer + '\r\n\r\n\r\n' # (add 3 new lines)
 
                 return bufs, dash_underline + row_answer + '\r\n\r\n'                
@@ -970,7 +977,7 @@ class ExpressionGenerator ( wx.Dialog ):
                 if self.show_answer and self.save_answer_under:
                         end = end + '\r\n\r\n' + '='*18 + u'ANSWERS:' + '='*18 + '=\r\n'
                         for x in xrange(0, self.total_items, self.items_per_row):
-                            anw = ''.join([('%i. %s' % (x+i+1, a) ).ljust(self.adjust_value) for i,a in enumerate(self.answers[x:x+self.items_per_row]) ])
+                            anw = ''.join([('{}. {}'.format (x+i+1, a) ).ljust(self.adjust_value) for i,a in enumerate(self.answers[x:x+self.items_per_row]) ])
                             end = end + anw + '\r\n'
                 
                 if self.row_exp:  # horizontal format
@@ -980,13 +987,17 @@ class ExpressionGenerator ( wx.Dialog ):
                         return bufs
         
         def get_file_out ( self):
-                """ Prepare for output to file """
+                """
+                Prepare for output to file
+                """
                 if self.row_exp:
                         return self.format_output()    
                 else:   return ''.join(self.format_output())
         
         def OnSave( self, event ):
-                """ Handler for saving output to file """
+                """
+                Handler for saving output to file
+                """
                 self.is_dash = True
                 tmp = self.show_answer
                 self.show_answer = False
@@ -1006,7 +1017,9 @@ class ExpressionGenerator ( wx.Dialog ):
                 event.Skip()
         
         def OnExit( self, event ):
-                """ Save user setting to file upon exit button is pressed """
+                """
+                Save user setting to file upon exit button is pressed
+                """
                 self.size = self.GetSizeTuple()
                 self.writeFile()
                 self.cancel = True
@@ -1014,17 +1027,23 @@ class ExpressionGenerator ( wx.Dialog ):
                 event.Skip()    
         
         def OnTabChanged ( self, event ):
-                """ Save settings if the current tab is not Settings tab"""
+                """
+                Save settings if the current tab is not Settings tab
+                """
                 if self.m_notebookGlobal.GetPageText(event.GetSelection()) != u"Settings":
                         self.GetSettings()
                 event.Skip()
                 
         def get_opers ( self ):
-                # get current checked ops (self.opers)
+                """
+                get current checked ops (self.opers)
+                """
                 self.opers = [ OPS[index] for index, op in enumerate(self.opers_mod) if op.IsChecked()]
         
         def GetSettings( self ):
-                # get settings when leaving Settings tab
+                """
+                get settings when leaving Settings tab
+                """
                 self.max_steps = self.m_spinCtrlSteps.GetValue()
                 self.have_remainder = self.m_radioBoxLeft.GetSelection() == 1
                 self.max_num = int(self.m_comboBoxRange.GetValue())
@@ -1061,11 +1080,13 @@ class ExpressionGenerator ( wx.Dialog ):
                     self.use_threading = False
 
         def GetHtmlText(self,text):
-            #"Simple conversion of text.  Use a more powerful version"
+            """
+            Simple conversion of text.  Use a more powerful version
+            """
             if self.font_bold:
-                text = '<strong>%s</strong>' % (text) # set font to bold
+                text = '<strong>{}</strong>'.format (text) # set font to bold
             html_font = self.get_font_size()
-            text = '<font color="%s" face="%s" size="%s">'  % (self.fg_color, self.font_name, html_font) + text + '</font>'
+            text = '<font color="{}" face="{}" size="{}">'.format (self.fg_color, self.font_name, html_font) + text + '</font>'
             text = '<pre>' + text + '</pre>' 		# Preserve spacing
             text = re.sub (u'([×÷+-]\s+\d+)', '<U>\g<1></U>', text) # underline the missing part
             text = text.replace('\n\n','<P>')     	# Paragraphs
@@ -1091,8 +1112,10 @@ class ExpressionGenerator ( wx.Dialog ):
             self.html_printer.Print(self.GetHtmlText(text), doc_name)
         
         def get_font_size (self):
-            # conversion from pixel size (7 - 72) to html font size (1 - 7)
-            # refer link: http://jerekdain.com/fontconversion.html
+            """
+            conversion from pixel size (7 - 72) to html font size (1 - 7)
+            Refer link: http://jerekdain.com/fontconversion.html
+            """
             if self.font_size in range(7, 10): return 1
             elif self.font_size in range(10, 12): return 2
             elif self.font_size in range(12, 14): return 3
@@ -1102,7 +1125,7 @@ class ExpressionGenerator ( wx.Dialog ):
             else: return 7
         
         def GetErrorText():
-           "Put your error text logic here.  See Python Cookbook for a useful example of error text."
+           "Put your error text logic here."
            return "Some error occurred."
                 
 if __name__ == '__main__':

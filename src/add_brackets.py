@@ -1,4 +1,9 @@
-# -*- coding: cp936 -*- 
+# -*- coding: cp936 -*-
+#!/usr/bin/env python
+
+# Author: Quinn Song
+# add_brackets.py: insert one or two pairs of brackets randomly;
+# add return a valid expression
 
 import random
 import re
@@ -39,12 +44,9 @@ def main (source):
     return add_br(tmp) if random.choice([True, False]) else tmp
     
 if __name__ == '__main__':
-    op = ['+', '-', '*', '/', '+', '-', '*', '/']
-    #op2 = '1+2-3*5/8-9+20*3-6'
-    #for i in range(10):
-    #    print main(op2)
-    op2 = '27+4*41'
-    print apply_pattern1(op2)
+    #op = '1+2-3*5/8-9+20*3-6'
+    op = '27+4*41-5+7-11'
+    print main(op)
 
     
     

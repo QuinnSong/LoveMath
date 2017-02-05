@@ -1,7 +1,13 @@
+#!/usr/bin/env python
+
+# Author: Quinn Song
+# kidsmode.py: use regex patterns to check if expression is valid;
+# add return True or False
+
 import random
 import re
 
-# Regex patterns to check if exp is valid
+# Regex patterns to validate exp
 MD_PATTERN = '(\d+(\*|/)\d+)'  ## * AND /
 AM_PATTERN = '(\d+(\+|-)\d+)'  ## + AND -
 BRA_PATTERN = '.*?(\([^)(]+\))' ## ( AND )
@@ -28,7 +34,7 @@ def replace_mul_div (exp, pattern, num_limit):
 def replace_bras (exp, num_limit):
     """
     1) for (), make sure all ops result is in range limit
-    3) finally replace () with actual result values
+    2) finally replace () with actual result values
     """
     
     while re.findall(BRA_PATTERN, exp):
