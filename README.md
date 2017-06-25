@@ -8,13 +8,13 @@ A very simple tool to generate random arithmetic equations using Python
 ![N|Solid](https://github.com/QuinnSong/LoveMath/blob/master/demo/main.png)
 
 #### Features:
-- Generate multiple step equations
+- Generate multiple-step equations
 - Support two formats: 
     1. Horizontal
 	2. Vertical
 - Define operation range, e.g. 5, 10, 100...etc.
 - Generate unknown equations
-- Operators can be a combination of the following:
+- Operations can be a combination of the following:
     1. `+` : addition
     2. `-` : subtraction
     3. `*` : multiplication
