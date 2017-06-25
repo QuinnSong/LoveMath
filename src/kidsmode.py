@@ -8,7 +8,7 @@
 import random
 import re
 
-# Regex patterns to validate exp
+# Regex patterns to check if exp is valid
 MD_PATTERN = '(\d+(\*|/)\d+)'  ## * AND /
 AM_PATTERN = '(\d+(\+|-)\d+)'  ## + AND -
 BRA_PATTERN = '.*?(\([^)(]+\))' ## ( AND )
@@ -74,11 +74,53 @@ def isExpValid(exp, num_limit):
     if exp and check_in_bras (exp, num_limit):
         return True
     else: return False
+    
+def isCarryOrBorrow (exp):
+    """
+    If there is carry or borrow in tens, return the result of expression;
+    else return 0.
+    Applicable only to addition and subtraction
+    """
+    v = re.sub('(\d*)(\d)', r'\2', exp)
+    return eval(exp) if eval(v) >= 10 or eval(v) < 0 else 0
+
+def calCarryOrBorrow (exp, num_limit):
+    """
+    Use while loop for each operation
+    """
+    res = 0
+    while len(re.findall(r'[\+-]', exp)) >= 1:
+        part = re.findall('^\d+[\+-]\d+', exp)[0]
+        res = isCarryOrBorrow(part)
+        if res <= 0 or res > num_limit : break
+        else:
+            exp = re.sub ('^\d+[\+-]\d+', str(res), exp)
+    return res > 0 and res <= num_limit
+
+def convertToDecimal (exp, seed, num_decimal = 2):
+    """
+    Convert an integer expression to decimal expression
+    """
+    nums = re.findall('\d+', exp)
+    ops = re.findall('[^\d]+', exp)
+
+    mask = lambda x : int(x) * random.choice (seed)
+    nums_mask = [str(mask(i)) for i in nums]
+    if len(nums) <= len(ops):
+        k = ''.join( [j for i in map(None, ops,nums_mask) for j in i if j])
+    else:
+        k = ''.join( [j for i in map(None, nums_mask, ops) for j in i if j])
+    return k
+    
 
 if __name__ == '__main__':
     #print isExpValid('((5+2)*1+3-10)+2*3', 5)
     #print isExpValid('6+(3-2)+5', 6)
     print isExpValid('(6-3)*6', 10)
+    s3 = '60-26-19'
+    #print calCarryOrBorrow (s3)        
+    a = '(212 + 2) - (71 - 811)'
+    print convertToDecimal(a)
 
     
         

@@ -7,8 +7,8 @@
 # 
 ###########################################################################
 ## GUI was generated with wxFormBuilder (version Jun 17 2015) 
-## Last update: 2017-02-04
-## version 1.22
+## Last update: 2017-05-22
+## version 1.27
 ###########################################################################
 
 # section imports -----------------------------
@@ -22,7 +22,7 @@ import os, sys
 import threading
 import lovemath
 from add_brackets import main
-from kidsmode import isExpValid
+from kidsmode import isExpValid, calCarryOrBorrow, convertToDecimal
 import codecs
 from configobj import ConfigObj
 from wx.html import HtmlEasyPrinting
@@ -35,8 +35,8 @@ BAD_PATTERN_1 = '\d+\/\d+\/'
 BAD_PATTERN_2 = '(\d+)\/(\d+)'
 # other consts
 SIGNS =[ u"( )", u"¡õ", u"?", u"__" ]
-VER = 'v1.22' # software version
-BUILD = 'Build 170204'
+VER = 'v1.27' # software version
+BUILD = 'Build 170523'
 AUTHOR = 'Quinn Song'
 TITLE = 'Love Math'
 MY_CLOUD_STORAGE = 'http://pan.baidu.com/s/1CNWlg'
@@ -49,6 +49,11 @@ EVT_COUNT = wx.PyEventBinder(myEVT_COUNT, 1)
 
 # get exe path
 EXE_PATH = unicode(os.path.dirname(sys.path[0]), 'cp936')
+
+# for decimal
+SEED_ONE = [0.1, 0.1, 0.1, 0.1]
+SEED_TWO = [0.01, 0.01, 0.01, 0.01]
+SEED_ONE_TWO = [0.1, 0.01, 0.1, 0.01, 1]
 
 # HtmlEasyPrinting is being used here for printing or preview
 class Printer(HtmlEasyPrinting):
@@ -85,6 +90,7 @@ class CountEvent(wx.PyCommandEvent):
         """
         return self._value
 
+
 class CountingThread(threading.Thread):
     def __init__(self, parent, value):
         """
@@ -106,17 +112,16 @@ class CountingThread(threading.Thread):
 
 
 ###########################################################################
-## Class ExpressionGenerator
+## Class EquationGenerator
 ###########################################################################
 
-class ExpressionGenerator ( wx.Dialog ):
+class EquationGenerator ( wx.Dialog ):
         
         def __init__( self, parent ):
                 wx.Dialog.__init__ ( self, parent, id = wx.ID_ANY, title = u"{} {}".format(TITLE, VER), pos = wx.DefaultPosition,
-                    size = wx.Size( 1024,650 ), style = wx.DEFAULT_DIALOG_STYLE|wx.MINIMIZE_BOX|wx.RESIZE_BORDER|wx.MAXIMIZE_BOX )
+                    size = wx.Size( 1324,650 ), style = wx.DEFAULT_DIALOG_STYLE|wx.MINIMIZE_BOX|wx.RESIZE_BORDER|wx.MAXIMIZE_BOX )
                 
-                self.SetSizeHintsSz ((900, 550), wx.DefaultSize )
-                
+                self.SetSizeHintsSz ((1250, 550), wx.DefaultSize )
                 # init icons
                 self.preview_ico = lovemath.previewIcon.GetBitmap()
                 self.save32_ico = lovemath.save32Icon.GetBitmap()
@@ -136,6 +141,9 @@ class ExpressionGenerator ( wx.Dialog ):
                 self.row_exp = True  ## False for vertical Format
                 self.adjust_value = None
                 self.check_every_step = True
+                self.carry_borrow = False
+                self.allow_decimal_one = False
+                self.allow_decimal_two = False
                 self.have_remainder = False
                 self.max_num = 10
                 self.allow_minus = False
@@ -156,13 +164,13 @@ class ExpressionGenerator ( wx.Dialog ):
                 self.save_answer_under = False
                 self.hide_ques_index = False
                 self.line_spacing = 1
+                self.col_spacing = 60
                 self.use_sign = False
                 self.sign_selected = 0
                 
                 # default header and footer
                 self.footer = u"="*45 + u"\r\nThank you for using Love Math! ^O^"
-                self.header = u"Here are the arithmetic expressions:\r\n" + u"="*45
-                
+                self.header = u"Here are the arithmetic equations:\r\n" + u"="*45
                 # font settings
                 self.font_bold = False
                 self.font_name = 'Courier New'
@@ -189,7 +197,6 @@ class ExpressionGenerator ( wx.Dialog ):
                 
                 # read program config file
                 self.readFile()
-                
                 # set window size
                 if self.size != (1200, 650):
                     self.SetSize(self.size)
@@ -250,33 +257,32 @@ class ExpressionGenerator ( wx.Dialog ):
                 self.m_btnAnswer.SetToolTipString(u'Hide Answer' if self.show_answer else u'Show Answer')
                 
                 bSizerBtns.AddSpacer( ( 0, 0), 5, wx.EXPAND, 5 )
-                
                 # add print icons
                 self.m_btnPageSetup = wx.BitmapButton( self.m_panelGen, wx.ID_ANY, self.setup_ico, wx.DefaultPosition, wx.Size(32, 32), wx.NO_BORDER|wx.BU_EXACTFIT  )
-                bSizerBtns.Add( self.m_btnPageSetup, 0, wx.ALL|wx.ALIGN_CENTER_VERTICAL, 0 )
+                bSizerBtns.Add( self.m_btnPageSetup, 0, wx.ALL, 10 )
                 self.m_btnPageSetup.SetToolTipString(u'Page Setup')
                 
-                self.m_btnPreview = wx.BitmapButton( self.m_panelGen, wx.ID_ANY, self.preview_ico, wx.DefaultPosition, wx.Size(48, 48), wx.NO_BORDER|wx.BU_EXACTFIT  )
-                bSizerBtns.Add( self.m_btnPreview, 0, wx.ALL|wx.ALIGN_CENTER_VERTICAL, 0 )
+                self.m_btnPreview = wx.BitmapButton( self.m_panelGen, wx.ID_ANY, self.preview_ico, wx.DefaultPosition, wx.Size(32, 32), wx.NO_BORDER|wx.BU_EXACTFIT  )
+                bSizerBtns.Add( self.m_btnPreview, 0, wx.ALL, 5 )
                 self.m_btnPreview.SetToolTipString(u'Preview')
                 
                 self.m_btnPrint = wx.BitmapButton( self.m_panelGen, wx.ID_ANY, self.print_ico, wx.DefaultPosition, wx.Size(32, 32), wx.NO_BORDER|wx.BU_EXACTFIT  )
-                bSizerBtns.Add( self.m_btnPrint, 0, wx.ALL|wx.ALIGN_CENTER_VERTICAL, 0 )
+                bSizerBtns.Add( self.m_btnPrint, 0, wx.ALL, 5 )
                 self.m_btnPrint.SetToolTipString(u'Print')
                 
                 bSizerBtns.AddSpacer( ( 0, 0), 5, wx.EXPAND, 5 )
                 
                 self.m_btnGen = wx.BitmapButton( self.m_panelGen, wx.ID_ANY, self.refresh_ico, wx.DefaultPosition, wx.Size(32, 32), wx.NO_BORDER|wx.BU_EXACTFIT  )
 
-                bSizerBtns.Add( self.m_btnGen, 0, wx.ALL|wx.ALIGN_CENTER_VERTICAL, 5 )
+                bSizerBtns.Add( self.m_btnGen, 0, wx.ALL, 5 )
                 self.m_btnGen.SetToolTipString(u'Generate')
                 
                 self.m_btnSave = wx.BitmapButton( self.m_panelGen, wx.ID_ANY, self.save32_ico, wx.DefaultPosition, wx.Size(32, 32), wx.NO_BORDER|wx.BU_EXACTFIT ) 
-                bSizerBtns.Add( self.m_btnSave, 0, wx.ALL|wx.ALIGN_CENTER_VERTICAL, 5 )
+                bSizerBtns.Add( self.m_btnSave, 0, wx.ALL, 5 )
                 self.m_btnSave.SetToolTipString(u'Export to text files')
                 
                 self.m_btnExit = wx.BitmapButton( self.m_panelGen, wx.ID_ANY, self.close32_ico, wx.DefaultPosition, wx.Size(32, 32), wx.NO_BORDER|wx.BU_EXACTFIT ) 
-                bSizerBtns.Add( self.m_btnExit, 0, wx.ALL|wx.ALIGN_CENTER_VERTICAL, 5 )
+                bSizerBtns.Add( self.m_btnExit, 0, wx.ALL, 5 )
                 self.m_btnExit.SetToolTipString(u'Exit')                
                 
                 bSizerGen.Add( bSizerBtns, 0, wx.ALIGN_RIGHT|wx.EXPAND, 5 )
@@ -302,17 +308,20 @@ class ExpressionGenerator ( wx.Dialog ):
                 self.m_panelGen.SetSizer( bSizerGen )
                 self.m_panelGen.Layout()
                 #bSizerGen.Fit( self.m_panelGen )
-                self.m_notebookGlobal.AddPage( self.m_panelGen, "Main", False )
+                self.m_notebookGlobal.AddPage( self.m_panelGen, u"Main", False )
                 self.m_panelSettings = wx.Panel( self.m_notebookGlobal, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
-                self.m_panelSettings.SetBackgroundColour(PANEL_BKCOLOR)
                 bSizerMain = wx.BoxSizer( wx.VERTICAL )
                 
-                gSizerMain = wx.FlexGridSizer( 0, 4, 0, 0 )
+                gSizerMain = wx.FlexGridSizer( 0, 5, 0, 0 )
                 
                 sbSizerMultiStep = wx.StaticBoxSizer( wx.StaticBox( self.m_panelSettings, wx.ID_ANY, u"Steps Count" ), wx.HORIZONTAL )
                 
                 self.m_spinCtrlSteps = wx.SpinCtrl( sbSizerMultiStep.GetStaticBox(), wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.Size( 65,-1 ), wx.SP_ARROW_KEYS, 1, 50, self.max_steps )
-                sbSizerMultiStep.Add( self.m_spinCtrlSteps, 0, wx.ALL, 5 )      
+                sbSizerMultiStep.Add( self.m_spinCtrlSteps, 0, wx.ALL, 5 )
+                
+                self.m_staticTextSteps = wx.StaticText( sbSizerMultiStep.GetStaticBox(), wx.ID_ANY, u"Steps", wx.DefaultPosition, wx.DefaultSize, 0 )
+                self.m_staticTextSteps.Wrap( -1 )
+                sbSizerMultiStep.Add( self.m_staticTextSteps, 0, wx.ALL|wx.ALIGN_CENTER_VERTICAL, 5 )           
                 
                 gSizerMain.Add( sbSizerMultiStep, 1, wx.EXPAND, 5 )     
                 
@@ -320,36 +329,52 @@ class ExpressionGenerator ( wx.Dialog ):
                 
                 m_comboBoxRangeChoices = [ u"5", u"10", u"50", u"100", u"1000", u"10000" ]
                 self.m_comboBoxRange = wx.ComboBox( sbSizerRange.GetStaticBox(), wx.ID_ANY, str(self.max_num), wx.DefaultPosition, wx.Size( 60,-1 ), m_comboBoxRangeChoices, 0 )
-                sbSizerRange.Add( self.m_comboBoxRange, 0, wx.ALL, 5 )                
-              
-                self.m_checkBoxZeroOut = wx.CheckBox( sbSizerRange.GetStaticBox(), wx.ID_ANY, u"Nonzero", wx.DefaultPosition, wx.DefaultSize, 0 )
+                sbSizerRange.Add( self.m_comboBoxRange, 0, wx.ALL, 5 )
+                
+                self.m_staticTextRange = wx.StaticText( sbSizerRange.GetStaticBox(), wx.ID_ANY, u"Range", wx.DefaultPosition, wx.DefaultSize, 0 )
+                self.m_staticTextRange.Wrap( -1 )
+                sbSizerRange.Add( self.m_staticTextRange, 0, wx.BOTTOM|wx.RIGHT|wx.TOP, 10 )
+                
+                self.m_checkBoxZeroOut = wx.CheckBox( sbSizerRange.GetStaticBox(), wx.ID_ANY, u"Nonezero", wx.DefaultPosition, wx.DefaultSize, 0 )
                 sbSizerRange.Add( self.m_checkBoxZeroOut, 0, wx.ALL, 10 )
                 self.m_checkBoxZeroOut.SetValue(self.exclude_zero)
                 
                 self.m_checkBoxCheckEveryStep = wx.CheckBox( sbSizerRange.GetStaticBox(), wx.ID_ANY, u"Watch Each Step", wx.DefaultPosition, wx.DefaultSize, 0 )
                 sbSizerRange.Add( self.m_checkBoxCheckEveryStep, 0, wx.ALL, 10 )
                 self.m_checkBoxCheckEveryStep.SetValue(self.check_every_step)
-                self.m_checkBoxCheckEveryStep.SetToolTipString('Validate Each Step')                
-            
+                self.m_checkBoxCheckEveryStep.SetToolTipString('Validate Each Step')
+                
+                #arrow_right = lovemath.right.GetBitmap()
+                #self.m_bitmapArrowRight = wx.StaticBitmap( sbSizerRange.GetStaticBox(), wx.ID_ANY, arrow_right, wx.DefaultPosition, wx.DefaultSize, 0 )
+                #sbSizerRange.Add( self.m_bitmapArrowRight, 0, wx.TOP, 5 )
+                
                 gSizerMain.Add( sbSizerRange, 1, wx.EXPAND, 5 )
                 
                 m_radioBoxLeftChoices = [ u"No", u"Yes" ]
                 self.m_radioBoxLeft = wx.RadioBox( self.m_panelSettings, wx.ID_ANY, u"Allow Remainder in Division?", wx.DefaultPosition, wx.DefaultSize, m_radioBoxLeftChoices, 1, wx.RA_SPECIFY_ROWS )
                 self.m_radioBoxLeft.SetSelection( 0 )
                 self.m_radioBoxLeft.Enable( False )
-                gSizerMain.Add( self.m_radioBoxLeft, 0, wx.ALL|wx.EXPAND, 0 )
+                gSizerMain.Add( self.m_radioBoxLeft, 0, wx.EXPAND, 0 )
                 
                 m_radioBoxLeftRowCol = [ u"Horizontal", u"Vertical" ]
-                self.m_radioBoxRowCol = wx.RadioBox( self.m_panelSettings, wx.ID_ANY, u"Expression Format", wx.DefaultPosition, wx.DefaultSize, m_radioBoxLeftRowCol, 1, wx.RA_SPECIFY_ROWS )
+                self.m_radioBoxRowCol = wx.RadioBox( self.m_panelSettings, wx.ID_ANY, u"Equation Format", wx.DefaultPosition, wx.DefaultSize, m_radioBoxLeftRowCol, 1, wx.RA_SPECIFY_ROWS )
                 self.m_radioBoxRowCol.SetSelection( int(not self.row_exp) )                
-                gSizerMain.Add( self.m_radioBoxRowCol, 0, wx.ALL|wx.EXPAND, 0 )
+                gSizerMain.Add( self.m_radioBoxRowCol, 0, wx.EXPAND, 0 )
+                
+                sbSizerCarryBorrow = wx.StaticBoxSizer( wx.StaticBox( self.m_panelSettings, wx.ID_ANY, u"Borrow/Carry" ), wx.HORIZONTAL )
+                
+                self.m_checkBoxCarryBorrow = wx.CheckBox( sbSizerCarryBorrow.GetStaticBox(), wx.ID_ANY, u"Required", wx.DefaultPosition, wx.DefaultSize, 0 )
+                sbSizerCarryBorrow.Add( self.m_checkBoxCarryBorrow, 0, wx.ALL, 10 )
+                self.m_checkBoxCarryBorrow.SetValue(self.carry_borrow)
+                self.m_checkBoxCarryBorrow.SetToolTipString('If checked, borrow/carry is required for +/- operations within 100')
+                gSizerMain.Add( sbSizerCarryBorrow, 1, wx.EXPAND, 5 )
                 
                 m_radioBoxMinusChoices = [ u"No", u"Yes" ]
                 self.m_radioBoxMinus = wx.RadioBox( self.m_panelSettings, wx.ID_ANY, u"Accept Negtive Answer?", wx.DefaultPosition, wx.DefaultSize, m_radioBoxMinusChoices, 1, wx.RA_SPECIFY_ROWS )
                 self.m_radioBoxMinus.SetSelection( self.allow_minus)
-                gSizerMain.Add( self.m_radioBoxMinus, 0, wx.ALL|wx.EXPAND, 0 )
+                gSizerMain.Add( self.m_radioBoxMinus, 0, wx.EXPAND, 0 )
                 
-                sbSizerOper = wx.StaticBoxSizer( wx.StaticBox( self.m_panelSettings, wx.ID_ANY, u"Operators" ), wx.HORIZONTAL )
+                sbSizerOper = wx.StaticBoxSizer( wx.StaticBox( self.m_panelSettings, wx.ID_ANY, u"Operations" ), wx.HORIZONTAL )
                 
                 self.m_checkBoxAdd = wx.CheckBox( sbSizerOper.GetStaticBox(), wx.ID_ANY, u"+", wx.DefaultPosition, wx.DefaultSize, 0 )
                 self.m_checkBoxAdd.SetValue('+' in self.opers) 
@@ -359,11 +384,11 @@ class ExpressionGenerator ( wx.Dialog ):
                 sbSizerOper.Add( self.m_checkBoxMinus, 0, wx.ALL, 10 )
                 self.m_checkBoxMinus.SetValue('-' in self.opers) 
                 
-                self.m_checkBoxMulti = wx.CheckBox( sbSizerOper.GetStaticBox(), wx.ID_ANY, u"*", wx.DefaultPosition, wx.DefaultSize, 0 )
+                self.m_checkBoxMulti = wx.CheckBox( sbSizerOper.GetStaticBox(), wx.ID_ANY, u"¡Á", wx.DefaultPosition, wx.DefaultSize, 0 )
                 sbSizerOper.Add( self.m_checkBoxMulti, 0, wx.ALL, 10 )
                 self.m_checkBoxMulti.SetValue('*' in self.opers) 
                 
-                self.m_checkBoxDiv = wx.CheckBox( sbSizerOper.GetStaticBox(), wx.ID_ANY, u"/", wx.DefaultPosition, wx.DefaultSize, 0 )
+                self.m_checkBoxDiv = wx.CheckBox( sbSizerOper.GetStaticBox(), wx.ID_ANY, u"¡Â", wx.DefaultPosition, wx.DefaultSize, 0 )
                 sbSizerOper.Add( self.m_checkBoxDiv, 0, wx.ALL, 10 )
                 self.m_checkBoxDiv.SetValue('/' in self.opers) 
                 
@@ -382,7 +407,7 @@ class ExpressionGenerator ( wx.Dialog ):
                 
                 gSizerMain.Add( sbSizerTotalQues, 1, wx.EXPAND, 5 )
                 
-                sbSizerPlaceHolder = wx.StaticBoxSizer( wx.StaticBox( self.m_panelSettings, wx.ID_ANY, u"Fill-in-the-Blank Equations" ), wx.HORIZONTAL )
+                sbSizerPlaceHolder = wx.StaticBoxSizer( wx.StaticBox( self.m_panelSettings, wx.ID_ANY, u"Unknown Equations" ), wx.HORIZONTAL )
                 
                 self.m_checkBoxUse = wx.CheckBox( sbSizerPlaceHolder.GetStaticBox(), wx.ID_ANY, u"Use Variable", wx.DefaultPosition, wx.DefaultSize, 0 )
                 sbSizerPlaceHolder.Add( self.m_checkBoxUse, 0, wx.LEFT|wx.TOP, 8 )
@@ -396,6 +421,26 @@ class ExpressionGenerator ( wx.Dialog ):
                 self.OnToggleRowCol(None) # To check if init settings are vertical format
                 
                 gSizerMain.Add( sbSizerPlaceHolder, 1, wx.EXPAND, 5 )
+                
+                sbSizerCarryDecimal = wx.StaticBoxSizer( wx.StaticBox( self.m_panelSettings, wx.ID_ANY, u"Decimals" ), wx.HORIZONTAL )
+                
+                #bSizerDecimal = wx.BoxSizer( wx.HORIZONTAL )
+                
+                self.m_checkBoxDecimalOne = wx.CheckBox( sbSizerCarryDecimal.GetStaticBox(), wx.ID_ANY, u"Tenths Decimal", wx.DefaultPosition, wx.DefaultSize, 0 )
+                self.m_checkBoxDecimalOne.SetValue(self.allow_decimal_one)
+                self.m_checkBoxDecimalOne.SetToolTipString('Generate equations for tenths decimals')
+                sbSizerCarryDecimal.Add( self.m_checkBoxDecimalOne, 0, wx.ALL, 5 )
+                
+                		
+                self.m_checkBoxDecimalTwo = wx.CheckBox( sbSizerCarryDecimal.GetStaticBox(), wx.ID_ANY, u"Hundredths Decimal", wx.DefaultPosition, wx.DefaultSize, 0 )
+                self.m_checkBoxDecimalTwo.SetValue(self.allow_decimal_two)
+                self.m_checkBoxDecimalTwo.SetToolTipString('Generate equations for Hundredths decimals')
+                sbSizerCarryDecimal.Add( self.m_checkBoxDecimalTwo, 0, wx.ALL, 5 )
+                
+                gSizerMain.Add( sbSizerCarryDecimal, 1, wx.EXPAND, 5 )                
+                                
+                if self.carry_borrow:
+                    self.OnCarryBorrow (None)
                 
                 bSizerMain.Add( gSizerMain, 0, wx.EXPAND, 5 )
                 
@@ -417,10 +462,10 @@ class ExpressionGenerator ( wx.Dialog ):
                 
                 self.m_staticTextPrintRow = wx.StaticText( sbSizerPrint.GetStaticBox(), wx.ID_ANY, u"Questions Per Row", wx.DefaultPosition, wx.DefaultSize, 0 )
                 self.m_staticTextPrintRow.Wrap( -1 )
-                bSizerQuesRow.Add( self.m_staticTextPrintRow, 0, wx.ALL, 5 )
+                bSizerQuesRow.Add( self.m_staticTextPrintRow, 0, wx.ALL|wx.ALIGN_CENTER_VERTICAL, 5 )
                 
                 self.m_spinCtrlPrint = wx.SpinCtrl( sbSizerPrint.GetStaticBox(), wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, wx.SP_ARROW_KEYS, 1, 10, self.items_per_row )
-                bSizerQuesRow.Add( self.m_spinCtrlPrint, 1, wx.ALL, 5 )
+                bSizerQuesRow.Add( self.m_spinCtrlPrint, 1, wx.ALL|wx.ALIGN_CENTER_VERTICAL, 5 )
                 
                 bSizerQuesRow.AddSpacer((20, -1))
                 
@@ -435,11 +480,20 @@ class ExpressionGenerator ( wx.Dialog ):
                 m_choiceSpacingChoices = [ u"1", u"2", u"3" ]
                 self.m_choiceSpacing = wx.ComboBox( sbSizerPrint.GetStaticBox(), wx.ID_ANY, str(self.line_spacing), wx.DefaultPosition, wx.Size( 80,-1 ), m_choiceSpacingChoices, 0 )
                 self.m_choiceSpacing.SetValue(str(self.line_spacing).strip('.0'))
-                bSizerQuesRow.Add( self.m_choiceSpacing, 0, wx.ALL, 5 )
+                bSizerQuesRow.Add( self.m_choiceSpacing, 0, wx.ALL|wx.ALIGN_CENTER_VERTICAL, 5 )
                 
                 bSizerQuesRow.AddSpacer((20, -1))
                 
-                self.m_checkBoxAnswerUnder = wx.CheckBox( sbSizerPrint.GetStaticBox(), wx.ID_ANY, u"Move Answer to the End", wx.DefaultPosition, wx.DefaultSize, 0 )
+                self.m_staticColSpacing = wx.StaticText( sbSizerPrint.GetStaticBox(), wx.ID_ANY, u"Column Spacing", wx.DefaultPosition, wx.DefaultSize, 0 )
+                bSizerQuesRow.Add( self.m_staticColSpacing, 0, wx.ALL|wx.ALIGN_CENTER_VERTICAL, 5 )                
+                
+                self.m_colSpacing = wx.Slider( sbSizerPrint.GetStaticBox(), wx.ID_ANY, 40, 0, 80, wx.DefaultPosition, wx.DefaultSize, wx.SL_HORIZONTAL|wx.SL_LABELS )
+                self.m_colSpacing.SetValue( self.col_spacing)
+                bSizerQuesRow.Add( self.m_colSpacing, 0, wx.ALIGN_CENTER_VERTICAL, 5 )
+                
+                bSizerQuesRow.AddSpacer((20, -1))
+                
+                self.m_checkBoxAnswerUnder = wx.CheckBox( sbSizerPrint.GetStaticBox(), wx.ID_ANY, u"Move Answer to End", wx.DefaultPosition, wx.DefaultSize, 0 )
                 bSizerQuesRow.Add( self.m_checkBoxAnswerUnder, 0, wx.ALL|wx.ALIGN_CENTER_VERTICAL, 5 )
                 self.m_checkBoxAnswerUnder.SetValue(self.save_answer_under)             
                 sbSizerPrint.Add( bSizerQuesRow, 0, wx.ALL, 0 )
@@ -461,12 +515,11 @@ class ExpressionGenerator ( wx.Dialog ):
                 
                 bSizerTxtQuesPath = wx.BoxSizer( wx.HORIZONTAL )
                 
-                self.m_staticTextQuesPath = wx.StaticText( sbSizerSavePath.GetStaticBox(), wx.ID_ANY, u"Questions", wx.DefaultPosition, wx.DefaultSize, 0 )
+                self.m_staticTextQuesPath = wx.StaticText( sbSizerSavePath.GetStaticBox(), wx.ID_ANY, u"Question", wx.DefaultPosition, wx.DefaultSize, 0 )
                 self.m_staticTextQuesPath.Wrap( -1 )
                 bSizerTxtQuesPath.Add( self.m_staticTextQuesPath, 0, wx.ALL, 10 )
                 
-                self.m_filePickerQues = wx.FilePickerCtrl( sbSizerSavePath.GetStaticBox(), wx.ID_ANY, self.ques_path,
-                                        u"Please choose a text file", u"*.txt", wx.DefaultPosition, wx.DefaultSize, wx.FLP_DEFAULT_STYLE|wx.FLP_SMALL )
+                self.m_filePickerQues = wx.FilePickerCtrl( sbSizerSavePath.GetStaticBox(), wx.ID_ANY, self.ques_path, u"Please choose a text file", u"*.txt", wx.DefaultPosition, wx.DefaultSize, wx.FLP_DEFAULT_STYLE|wx.FLP_SMALL )
                 bSizerTxtQuesPath.Add( self.m_filePickerQues, 1, wx.ALL, 5 )            
                 
                 sbSizerSavePath.Add( bSizerTxtQuesPath, 0, wx.EXPAND, 5 )
@@ -477,8 +530,7 @@ class ExpressionGenerator ( wx.Dialog ):
                 self.m_staticTextAnswerPath.Wrap( -1 )
                 bSizerAnswerPath.Add( self.m_staticTextAnswerPath, 0, wx.ALL, 10 )
                 
-                self.m_filePickerAnswer = wx.FilePickerCtrl( sbSizerSavePath.GetStaticBox(), wx.ID_ANY, self.answ_path,
-                                            u"Please choose a text file", u"*.txt", wx.DefaultPosition, wx.DefaultSize, wx.FLP_DEFAULT_STYLE|wx.FLP_SMALL )
+                self.m_filePickerAnswer = wx.FilePickerCtrl( sbSizerSavePath.GetStaticBox(), wx.ID_ANY, self.answ_path, u"Please choose a text file", u"*.txt", wx.DefaultPosition, wx.DefaultSize, wx.FLP_DEFAULT_STYLE|wx.FLP_SMALL )
                 bSizerAnswerPath.Add( self.m_filePickerAnswer, 1, wx.ALL, 5 )
                 
                 
@@ -494,7 +546,6 @@ class ExpressionGenerator ( wx.Dialog ):
                 
                 # add about tab
                 self.m_panelAbout = wx.Panel( self.m_notebookGlobal, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
-                self.m_panelAbout.SetBackgroundColour(PANEL_BKCOLOR)
                 bSizerAbout = wx.BoxSizer( wx.VERTICAL )
                 
                 logo = lovemath.LoveMath.GetBitmap()
@@ -543,13 +594,17 @@ class ExpressionGenerator ( wx.Dialog ):
                 self.m_checkBoxHideQuesIndex.Bind(wx.EVT_CHECKBOX, self.OnHideQuesIndex )
                 self.m_checkBoxAnswerUnder.Bind(wx.EVT_CHECKBOX, self.OnAnswerUnder )
                 self.m_radioBoxRowCol.Bind(wx.EVT_RADIOBOX, self.OnToggleRowCol )
-                
+                self.m_checkBoxCarryBorrow.Bind (wx.EVT_CHECKBOX, self.OnCarryBorrow)
+                self.m_checkBoxDecimalOne.Bind (wx.EVT_CHECKBOX, self.OnDecimal)
+                self.m_checkBoxDecimalTwo.Bind (wx.EVT_CHECKBOX, self.OnDecimal)
+                #self.m_checkBoxSqu.Bind( wx.EVT_CHECKBOX, self.OnSq )
+                #self.m_checkBoxBra.Bind( wx.EVT_CHECKBOX, self.OnBr )
                 # opers events
-                self.m_checkBoxAdd.Bind(wx.EVT_CHECKBOX, self.OnToggleRowCol )
-                self.m_checkBoxMinus.Bind(wx.EVT_CHECKBOX, self.OnToggleRowCol )
-                self.m_checkBoxMulti.Bind(wx.EVT_CHECKBOX, self.OnToggleRowCol )
-                self.m_checkBoxDiv.Bind(wx.EVT_CHECKBOX, self.OnToggleRowCol )
-                self.m_checkBoxBra.Bind(wx.EVT_CHECKBOX, self.OnToggleRowCol )
+                self.m_checkBoxAdd.Bind(wx.EVT_CHECKBOX, self.OnAdd )
+                self.m_checkBoxMinus.Bind(wx.EVT_CHECKBOX, self.OnMinus )
+                self.m_checkBoxMulti.Bind(wx.EVT_CHECKBOX, self.OnMulti )
+                self.m_checkBoxDiv.Bind(wx.EVT_CHECKBOX, self.OnDiv )
+                self.m_checkBoxBra.Bind(wx.EVT_CHECKBOX, self.OnBra )
                 self.Bind(wx.EVT_CLOSE, self.OnExit)
                 self.Bind(EVT_COUNT, self.OnCount)
 
@@ -574,6 +629,7 @@ class ExpressionGenerator ( wx.Dialog ):
                 return b        
         
         # Virtual event handlers, overide them in your derived class
+
         def UpdateWindow( self, event ):
                 """ GUI refresh when font changes """
                 # update toggle button font
@@ -610,8 +666,51 @@ class ExpressionGenerator ( wx.Dialog ):
                     if f.IsOk() and f.IsFixedWidth():
                         fixed_fonts.append(name)
                     else: continue
-                return fixed_fonts        
-              
+                return fixed_fonts
+            
+        def OnDecimal (self, event):
+                """
+                Decimal and CarryBorrow cannot both be True
+                """
+                if self.m_checkBoxDecimalOne.GetValue() or self.m_checkBoxDecimalTwo.GetValue():
+                    self.m_checkBoxCarryBorrow.SetValue(False)
+                    self.OnCarryBorrow ( None )
+                event.Skip()
+                
+            
+        def OnCarryBorrow ( self, event ):
+                """
+                If CarryBorrow is checked/unchecked, disable/enable some options
+                """
+                flag = self.m_checkBoxCarryBorrow.GetValue()
+                if flag:
+                    self.m_checkBoxDecimalOne.SetValue(False)
+                    self.allow_decimal_one = False
+                    self.m_checkBoxDecimalTwo.SetValue(False)
+                    self.allow_decimal_two = False
+                self.m_radioBoxMinus.SetSelection(0)
+                self.m_radioBoxMinus.Enable(not flag)
+                self.m_checkBoxMulti.SetValue(False)
+                self.m_checkBoxMulti.Enable(not flag)
+                self.m_checkBoxDiv.SetValue(False)
+                self.m_checkBoxDiv.Enable(not flag)
+                self.m_checkBoxBra.SetValue(False)
+                self.m_checkBoxBra.Enable(not flag)
+                self.m_checkBoxZeroOut.SetValue(True)
+                self.m_checkBoxZeroOut.Enable(not flag)
+                #self.m_checkBoxCheckEveryStep.SetValue(True)
+                #self.m_checkBoxCheckEveryStep.Enable(not flag)
+                if flag:
+                    self.m_comboBoxRange.SetValue('100')
+                self.m_comboBoxRange.Enable(not flag)
+                if event:
+                    event.Skip()
+                    
+        
+        def MathReplace ( self, exp ):
+                """ Replace */ characters with ¡Á/¡Â """
+                return exp.replace(u'*', u'¡Á').replace(u'/',u'¡Â')
+                
         def OpenLink( self, event ):
                 """ Open the link for cloud storage """
                 os.startfile(MY_CLOUD_STORAGE)
@@ -624,7 +723,7 @@ class ExpressionGenerator ( wx.Dialog ):
                 event.Skip()
                 
         def OnAnswerUnder (self, event):
-                """ Move answer to the end """
+                """ Move answer to end """
                 if self.m_checkBoxAnswerUnder.GetValue() and self.m_checkBoxHideQuesIndex.GetValue():
                     self.m_checkBoxHideQuesIndex.SetValue(False)
                 event.Skip()
@@ -657,6 +756,47 @@ class ExpressionGenerator ( wx.Dialog ):
                     self.m_checkBoxBra.SetValue(False)    
                     
                 if event: event.Skip()
+                
+        def OnAdd (self, event):
+                """
+                Add Oper event
+                """
+                self.OnOperAction(self.m_checkBoxAdd)
+                event.Skip()
+        def OnMinus (self, event):
+                """
+                Minus Oper event
+                """
+                self.OnOperAction(self.m_checkBoxMinus)
+                event.Skip()
+                
+        def OnMulti (self, event):
+                """
+                Multi Oper event
+                """
+                self.OnOperAction(self.m_checkBoxMulti)
+                event.Skip()
+                
+        def OnDiv (self, event):
+                """
+                Div Oper event
+                """
+                self.OnOperAction(self.m_checkBoxDiv)
+                event.Skip()
+                
+        def OnBra (self, event):
+                """
+                Bra Oper event
+                """
+                if not self.row_exp:
+                    self.m_checkBoxBra.SetValue(False)
+                event.Skip()
+        def OnOperAction (self, m_checkBox):
+                """
+                Function for Oper click
+                """
+                if not self.row_exp and m_checkBox.GetValue():
+                    [x.SetValue(False) for x in self.opers_mod if x != m_checkBox]
                 
         def OnRangeChanged ( self, event ):
                 """
@@ -692,9 +832,13 @@ class ExpressionGenerator ( wx.Dialog ):
                         self.config['SETTINGS']['ANSW_PATH'] = self.answ_path
                         self.config['SETTINGS']['EXCLUDE_ZERO'] = self.exclude_zero
                         self.config['SETTINGS']['CHECK_EVERY_STEP'] = self.check_every_step
+                        self.config['SETTINGS']['CARRY_BORROW'] = self.carry_borrow
+                        self.config['SETTINGS']['ALLOW_DECIMAL_ONE'] = self.allow_decimal_one
+                        self.config['SETTINGS']['ALLOW_DECIMAL_TWO'] = self.allow_decimal_two
                         self.config['SETTINGS']['ANSW_SAVE_UNDER'] = self.save_answer_under
                         self.config['SETTINGS']['HIDE_QUES_INDEX'] = self.hide_ques_index
-                        self.config['SETTINGS']['LINE_SPACING'] = str(self.line_spacing) 
+                        self.config['SETTINGS']['LINE_SPACING'] = str(self.line_spacing)
+                        self.config['SETTINGS']['COL_SPACING'] = str(self.col_spacing) 
                         
                         if not self.config.has_key('MAIN'):
                                 self.config['MAIN'] = {}
@@ -733,11 +877,15 @@ class ExpressionGenerator ( wx.Dialog ):
                                 self.check_bracket = (self.config['SETTINGS']['BRA_CHECKED'] == 'True')
                                 self.exclude_zero = (self.config['SETTINGS']['EXCLUDE_ZERO'] == 'True')
                                 self.check_every_step = (self.config['SETTINGS']['CHECK_EVERY_STEP'] == 'True')
+                                self.carry_borrow = (self.config['SETTINGS']['CARRY_BORROW'] == 'True')
+                                self.allow_decimal_one = (self.config['SETTINGS']['ALLOW_DECIMAL_ONE'] == 'True')
+                                self.allow_decimal_two = (self.config['SETTINGS']['ALLOW_DECIMAL_TWO'] == 'True')
                                 self.save_answer_under = (self.config['SETTINGS']['ANSW_SAVE_UNDER']  == 'True' ) 
                                 self.hide_ques_index = (self.config['SETTINGS']['HIDE_QUES_INDEX'] == 'True')
                                 self.row_exp = (self.config['SETTINGS']['ROW_EXP'] == 'True')
                                 self.allow_minus = (self.config['SETTINGS']['ALLOW_NEGTIVE'] == 'True' )
                                 self.line_spacing = int(self.config['SETTINGS']['LINE_SPACING'] )
+                                self.col_spacing = int(self.config['SETTINGS']['COL_SPACING'] )
                                 
                                 self.bg_color = self.config['MAIN']['BG_COLOR']
                                 self.fg_color = self.config['MAIN']['FG_COLOR']
@@ -815,11 +963,11 @@ class ExpressionGenerator ( wx.Dialog ):
                 else:
                     self.run_thread()
                     self.OnCount(None)                
-                event.Skip()
+                event.Skip()                
                 
         def run_thread ( self ):
                 """
-                Main function to generate good math expressions
+                Main function to generate good math equations
                 """
                 # reset these lists  
                 self.questions = []
@@ -838,26 +986,54 @@ class ExpressionGenerator ( wx.Dialog ):
                         exp = ''.join( [ item for pair in zip([str(x) for x in random.sample( range(int(self.exclude_zero), self.max_num + 1), self.max_steps + 1)],  \
                             list(op) + [0]) for item in pair][:-1])
                         if re.findall(BAD_PATTERN_1, exp):
+                                if not dialog.Update(count)[0]:
+                                    self.cancel = True
                                 continue
                         if not self.have_remainder and  any(int(i)%int(j) != 0 for i,j in re.findall(BAD_PATTERN_2, exp) if int(j) != 0):
-                                continue                        
+                                if not dialog.Update(count)[0]:
+                                    self.cancel = True
+                                continue                      
                         try:
-                                if self.check_bracket:
-                                    exp = main(exp)
+                                if self.check_bracket: exp = main(exp)
                                 # remove brackets like '(1+2+3)'
                                 exp = re.sub('^\((.*)\)$', '\g<1>', exp)
                                 exp = re.sub('(.*)\((\d+)\)(.*)', '\g<1>\g<2>\g<3>', exp )
                                 exp = re.sub('(.*)\(\((.*)\)\)(.*)', '\g<1>\g<2>\g<3>', exp )
                                 
-                                if self.check_every_step and ( not isExpValid(exp, self.max_num)):
-                                    continue
+                                if self.carry_borrow:
+                                    if not calCarryOrBorrow(exp, self.max_num):
+                                        if not dialog.Update(count)[0]:
+                                            self.cancel = True
+                                        continue
+                                else:
+                                    if self.check_every_step and ( not isExpValid(exp, self.max_num)):
+                                        if not dialog.Update(count)[0]:
+                                            self.cancel = True
+                                        continue
+                                    if self.allow_decimal_one and (not self.allow_decimal_two):
+                                        exp = convertToDecimal(exp, SEED_ONE)
+                                    elif self.allow_decimal_one and self.allow_decimal_two:
+                                        exp = convertToDecimal(exp, SEED_ONE_TWO)
+                                    elif (not self.allow_decimal_one) and self.allow_decimal_two:
+                                        exp = convertToDecimal(exp, SEED_TWO)
                                 
                                 result = eval(exp)
                                 if not self.allow_minus and result < 0:
+                                    if not dialog.Update(count)[0]:
+                                        self.cancel = True
                                     continue
 
-                                self.questions.append('{}. {}'.format(count + 1, exp) if not self.hide_ques_index else exp)
-                                self.answers.append(str(result))
+                                self.questions.append('%i. %s' % (count + 1, exp) if not self.hide_ques_index else exp)
+                                
+                                if (not self.allow_decimal_one) and (not self.allow_decimal_two):
+                                    self.answers.append(str(result))
+                                elif int(result) == result:
+                                    self.answers.append(str(int(result)))
+                                elif self.allow_decimal_two:
+                                    self.answers.append('{:0.2f}'.format(result))
+                                else:
+                                    self.answers.append('{:0.1f}'.format(result))
+                                    
                                 count = count + 1
                                 self.cancel = not dialog.Update(count)[0]
                                 
@@ -870,39 +1046,40 @@ class ExpressionGenerator ( wx.Dialog ):
                 """
                 # clear richtext window first
                 self.m_richTextWindow.Clear()
-                if self.row_exp:
-                        max_value_q = max(map(self.CalWidth, self.questions))
-                        self.adjust_value = max_value_q/3 + 3
-                        output = self.format_output()
-                        self.m_richTextWindow.AppendText(output)
-                else:
-                        max_value_q = self.CalWidth('{}. + {}'.format (self.total_items, self.max_num))
-                        self.adjust_value = max_value_q/8 + 5           
-        
-                        output = self.format_output()
-                        for b in xrange(0, len(output), 2):                    
-                            self.m_richTextWindow.AppendText(output[b])
-                            
-                            if b + 1 < len(output):
-
-                                frm_tos = [(m.start(0), m.end(0)) for m in re.finditer('[^\s\d]\s+\d+', output[b+1])]
-                                last = self.m_richTextWindow.GetLastPosition()
-                                self.m_richTextWindow.AppendText(output[b+1])
-                                # set selection underlined
-                                for frm,to in frm_tos:    
-                                    self.m_richTextWindow.SetSelection(last+frm, last+to)
-                                    self.m_richTextWindow.ApplyUnderlineToSelection()                        
-                pos = self.m_richTextWindow.GetCaretPosition()
-                self.m_richTextWindow.ScrollIntoView(pos, wx.WXK_END)
-                if evt: evt.Skip()
+                if not self.cancel: # if cancelled by user, no need to show result
+                    if self.row_exp:
+                            max_value_q = max(map(self.CalWidth, self.questions))
+                            self.adjust_value = (max_value_q/3 * (46 + self.col_spacing) * 10/self.font_size)/100 + 3
+                            output = self.format_output()
+                            self.m_richTextWindow.AppendText(output)
+                    else:
+                            max_value_q = self.CalWidth('%s. + %s' % (self.total_items, self.max_num))
+                            self.adjust_value = max_value_q * 10/self.font_size /8 + 5           
+                
+                            output = self.format_output()
+                            for b in xrange(0, len(output), 2):                    
+                                self.m_richTextWindow.AppendText(output[b])
+                                
+                                if b + 1 < len(output):
+                                    # take consideration of decimal result
+                                    frm_tos = [(m.start(0), m.end(0)) for m in re.finditer('[^\s\d]\s+\d+[\.\d+]*', output[b+1])]
+                                    last = self.m_richTextWindow.GetLastPosition()
+                                    self.m_richTextWindow.AppendText(output[b+1])
+                                    # set selection underlined
+                                    for frm,to in frm_tos:    
+                                        self.m_richTextWindow.SetSelection(last+frm, last+to)
+                                        self.m_richTextWindow.ApplyUnderlineToSelection()                        
+                    pos = self.m_richTextWindow.GetCaretPosition()
+                    self.m_richTextWindow.ScrollIntoView(pos, wx.WXK_END)
+                if evt:
+                    evt.Skip()
                         
         def CalWidth(self, line):
                 """
                 get the width of a string in pixels
                 """
                 f = self.m_richTextWindow.GetFont()
-                a = self.font_name
-                f.SetFaceName('Courier New')
+                f.SetFaceName(self.font_name)
                 dc = wx.WindowDC(self)
                 dc.SetFont(f)
                 line_width, height = dc.GetTextExtent(line)
@@ -938,7 +1115,7 @@ class ExpressionGenerator ( wx.Dialog ):
                 max_value_q = max(map(self.CalWidth, self.questions))
 
                 for q_list, a_list in zip(q_grp, a_grp):
-                        body = ''.join([('{} = {}'.format (q, a_list[i] if self.show_answer and (not self.save_answer_under) else '') ).ljust(self.adjust_value)  for i,q in enumerate(q_list)])
+                        body = ''.join([('%s = %s' % (q, a_list[i] if self.show_answer and (not self.save_answer_under) else '') ).ljust(self.adjust_value)  for i,q in enumerate(q_list)])
                         buf = buf + body + ('\r\n' ) * self.line_spacing
                 if tmp_a != None: self.show_answer = tmp_a
                 if tmp_q: self.questions = tmp_q
@@ -950,11 +1127,12 @@ class ExpressionGenerator ( wx.Dialog ):
                 """
                 q_grp = [self.questions[x:x+self.items_per_row] for x in xrange(0, self.total_items, self.items_per_row)]
                 a_grp = [self.answers[x:x+self.items_per_row] for x in xrange(0, self.total_items, self.items_per_row)]
-                max_value_q = self.CalWidth('{}. + {}'.format (self.total_items, self.max_num))
+                max_value_q = self.CalWidth('%s. + %s' % (self.total_items, self.max_num))
                 bufs = []
                 # define lambda functions for index alignment
                 left_indent = len(str(self.max_num/10)) + 5
-                f =lambda x: (x.split('.')[0]+ '.').rjust(left_indent) + x.split('.')[1].rjust(self.adjust_value - left_indent)
+                # update lambda func to capture decimal part
+                f =lambda x: (re.findall('\d+(?=\.\s)', x)[0]+ '.').rjust(left_indent) + re.findall('\s+\d+[\.\d+]*', x)[0].rjust(self.adjust_value - left_indent)
                 s = lambda y: 1 if self.font_name == 'Fixedsys' and (y == '*' or y == '/') else 0
 
                 for q_list, a_list in zip(q_grp, a_grp):
@@ -964,13 +1142,12 @@ class ExpressionGenerator ( wx.Dialog ):
                             buf = buf + row + ('\r\n' ) * self.line_spacing
                         bufs.append(buf)
                         buf = ''
-                        row = ''.join([(self.opers[0]+' '.ljust(len(str(self.max_num))-len(q_num[-1]))+q_num[-1]).rjust(self.adjust_value - (s(self.opers[0]))) for q_num in q_num_grp])
+                        row = ''.join([(self.MathReplace(self.opers[0])+' '.ljust(len(str(self.max_num))-len(q_num[-1]))+q_num[-1]).rjust(self.adjust_value - (s(self.opers[0]))) for q_num in q_num_grp])
                         bufs.append(row + ('\r\n' ) * self.line_spacing )
                         if self.is_dash:
-                            dash_underline = ''.join([('-'* (len(str(self.max_num)) + 1)).rjust(self.adjust_value) for i in range(len(q_list))]) + ('\r\n' ) * self.line_spacing
-                        else:
-                            dash_underline = ''
-                        row_answer = ''.join(['{}'.format (i if self.show_answer and (not self.save_answer_under) else '').rjust(self.adjust_value)  for i in a_list])
+                            dash_underline = ''.join([('-'* (len(str(self.max_num)) + 1 )).rjust(self.adjust_value) for i in range(len(q_list))]) + ('\r\n' ) * self.line_spacing
+                        else: dash_underline = ''
+                        row_answer = ''.join(['%s' % (i if self.show_answer and (not self.save_answer_under) else '').rjust(self.adjust_value)  for i in a_list])
                         buf = buf + dash_underline + row_answer + '\r\n\r\n\r\n' # (add 3 new lines)
 
                 return bufs, dash_underline + row_answer + '\r\n\r\n'                
@@ -993,39 +1170,39 @@ class ExpressionGenerator ( wx.Dialog ):
                 if self.show_answer and self.save_answer_under:
                         end = end + '\r\n\r\n' + '='*18 + u'ANSWERS:' + '='*18 + '=\r\n'
                         for x in xrange(0, self.total_items, self.items_per_row):
-                            anw = ''.join([('{}. {}'.format (x+i+1, a) ).ljust(self.adjust_value) for i,a in enumerate(self.answers[x:x+self.items_per_row]) ])
+                            anw = ''.join([('%i. %s' % (x+i+1, a) ).ljust(self.adjust_value) for i,a in enumerate(self.answers[x:x+self.items_per_row]) ])
                             end = end + anw + '\r\n'
                 
                 if self.row_exp:  # horizontal format
-                        return buf + '\r\n'+end
+                        return self.MathReplace(buf + '\r\n'+end )
                 else:   # Vertical format
                         bufs.append(buf + '\r\n'+end)
                         return bufs
         
         def get_file_out ( self):
-                """
-                Prepare for output to file
+                """ 
+                Prepare for output to file 
                 """
                 if self.row_exp:
                         return self.format_output()    
                 else:   return ''.join(self.format_output())
         
         def OnSave( self, event ):
-                """
-                Handler for saving output to file
+                """ 
+                Handler for saving output to file 
                 """
                 self.is_dash = True
                 tmp = self.show_answer
                 self.show_answer = False
                 output_ques = self.get_file_out() 
                 file_ques = self.ques_path
-                with  codecs.open(file_ques, 'w', 'utf-8') as f:
+                with  codecs.open(file_ques, 'w', 'utf-8') as f: 
                     f.write(output_ques)
                 
                 self.show_answer = True
                 output_answer = self.get_file_out()        
                 file_answer = self.answ_path
-                with  codecs.open(file_answer, 'w', 'utf-8') as f:
+                with  codecs.open(file_answer, 'w', 'utf-8') as f: 
                     f.write(output_answer)
                 self.show_answer = tmp
                 
@@ -1044,7 +1221,7 @@ class ExpressionGenerator ( wx.Dialog ):
                 self.Destroy()
                 event.Skip()    
         
-        def OnTabChanged ( self, event ):
+        def OnTabChanged ( self, event ):                
                 """
                 Save settings if the current tab is not Settings tab
                 """
@@ -1074,6 +1251,9 @@ class ExpressionGenerator ( wx.Dialog ):
                 self.sign_selected = self.m_choiceSpaceHolder.GetSelection()
                 self.exclude_zero = self.m_checkBoxZeroOut.GetValue()
                 self.check_every_step = self.m_checkBoxCheckEveryStep.GetValue()
+                self.carry_borrow = self.m_checkBoxCarryBorrow.GetValue()
+                self.allow_decimal_one = self.m_checkBoxDecimalOne.GetValue()
+                self.allow_decimal_two = self.m_checkBoxDecimalTwo.GetValue()
                 self.header = self.m_textCtrlStart.GetValue()
                 self.footer = self.m_textCtrlEnd.GetValue()
                 self.ques_path = self.m_filePickerQues.GetTextCtrlValue()
@@ -1081,6 +1261,7 @@ class ExpressionGenerator ( wx.Dialog ):
                 self.save_answer_under = self.m_checkBoxAnswerUnder.GetValue()
                 self.hide_ques_index = self.m_checkBoxHideQuesIndex.GetValue()
                 self.line_spacing = int(self.m_choiceSpacing.GetValue())
+                self.col_spacing = int(self.m_colSpacing.GetValue())
                 self.get_opers()
                 # in case no oper is checked, then default "+" is checked
                 if not self.opers:
@@ -1150,11 +1331,11 @@ class ExpressionGenerator ( wx.Dialog ):
                 return 7
         
         def GetErrorText():
-           "Put your error text logic here."
+           """Put your error text logic here."""
            return "Some error occurred."
                 
 if __name__ == '__main__':
     app = wx.App(False)
-    frame = ExpressionGenerator(None)
-    app.MainLoop()        
+    frame = EquationGenerator(None)
+    app.MainLoop()
 
