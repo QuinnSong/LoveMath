@@ -1,5 +1,5 @@
-## Love Math 1.22
-A very simple tool to generate random arithmetic expressions using Python
+## Love Math 1.27
+A very simple tool to generate random arithmetic equations using Python
 
 #### Python version
 2.7
@@ -8,12 +8,12 @@ A very simple tool to generate random arithmetic expressions using Python
 ![N|Solid](https://github.com/QuinnSong/LoveMath/blob/master/demo/main.png)
 
 #### Features:
-- Generate multiple step expressions
+- Generate multiple step equations
 - Support two formats: 
     1. Horizontal
 	2. Vertical
 - Define operation range, e.g. 5, 10, 100...etc.
-- Generate Fill-in-Blank equations
+- Generate unknown equations
 - Operators can be a combination of the following:
     1. `+` : addition
     2. `-` : subtraction
@@ -24,5 +24,7 @@ A very simple tool to generate random arithmetic expressions using Python
 - Export questions/answers to separate text files
 - Preview / Print the questions
 - Show / Hide answers
+- Options of tenths and hundredths decimals
+- Options of borrow/carry in addition and subtraction
 
-2017.02.04
+2017.06.25
