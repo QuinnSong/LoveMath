@@ -1,5 +1,5 @@
 ## Love Math 1.27
-A very simple tool to generate random arithmetic equations using Python
+A very simple tool to generate random arithmetic equations using Python 27
 
 #### Python version
 2.7
